@@ -4,7 +4,9 @@ const {json, urlencoded} = require("express")
 const {connectDB, databaseConnection} = require('./config/dbConn.js')
 const {DataTypes} = require('sequelize');
 const User = require('./models/user.js')(databaseConnection, DataTypes)
-const sendEmail = require('./utilities/emailClient.js')
+const PROJECTS_FOLDER = "PERSONAL PROJECTS"
+const {exec} = require("child_process")
+
 const app = express()
 
 app.set("x-powered-by", false)
@@ -27,10 +29,30 @@ app.post('/register', async (req, res) => {
     .catch(error => res.status(500).send(error))
 })
 
-app.get("/email", (req, res) => {
-    sendEmail("testing server", "Sample text from the server.")
+app.get("/schedule", async (req, res) => {
+    await User.findAll().then(users => {
+        
+        users.forEach(user => {
+            let userEmail = user.email
+            exec(`node /home/nangosha/'${PROJECTS_FOLDER}'/question_scheduler/utilities/sender.js --${userEmail}`, (error, stdout, stderr) => {
+                if (error) {
+                    console.error(`error: ${error.message}`);
+                    return;
+                }
+                
+                if (stderr) {
+                    console.error(`stderr: ${stderr}`);
+                    return;
+                }
+                
+                console.log(`stdout:\n${stdout}`);
+                
+            })            
+        })
+    })
+    
 })
 
 app.listen(process.env.SERVER_PORT, () => {
     console.log(`server is listening on port ${process.env.SERVER_PORT}`)
-})
+}) 
